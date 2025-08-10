@@ -1,5 +1,5 @@
+# Redis — Repositório de estudo e contexto
 
-<<<<<<< HEAD
 Exemplos práticos em Python para estudar Redis:
 - Conceitos básicos (SET/GET, HSET/HGET, EXPIRE/TTL).
 - Padrão cache-aside (cache + fonte de dados).
@@ -106,5 +106,3 @@ print(repo.get_hash("user:1", "name"))  # -> "Alice"
 - Defina TTL para chaves de cache.
 - Padronize nomes (ex.: entidade:id:campo).
 - Monitore hits/misses e ajuste TTL conforme a necessidade.
-=======
->>>>>>> 3328fd017f655fafe426b5022c9cc3ad4899bebf
