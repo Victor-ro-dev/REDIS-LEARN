@@ -1,39 +1,43 @@
 # Redis — Repositório de estudo e contexto
 
-Este repositório contém exemplos simples para estudo de Redis em Python, com foco em:
-- Conceitos básicos (SET/GET, HSET/HGET, TTL/expire).
+Exemplos práticos em Python para estudar Redis:
+- Conceitos básicos (SET/GET, HSET/HGET, EXPIRE/TTL).
 - Padrão cache-aside (cache + fonte de dados).
-- Manipulação de hashes e expiração por chave.
+- Hashes com expiração e conversão para dicionário Python.
 
-## Estrutura principal
+## Estrutura
 
-- Scripts de execução:
-  - [run.py](run.py) — Exemplo com Hash + TTL e consumo em memória via [`configs.start_form.start_form`](configs/start_form.py).
-  - [redis_raw.py](redis_raw.py) — Comandos básicos do Redis usando a lib oficial.
-  - [redis_perf.py](redis_perf.py) — Demonstra o padrão cache-aside combinando Redis e um repositório “MySQL” em memória.
-
-- Conexão Redis:
-  - [`models.connection.connect_options`](models/connection/connect_options.py) — Parâmetros de conexão (host, port, db, password).
-  - [`models.connection.redis_connection.RedisConnectionHandle`](models/connection/redis_connection.py) — Cria e mantém a conexão.
-
+- Scripts:
+  - [run.py](run.py) — Hash + TTL e consumo via `configs.start_form`.
+  - [redis_raw.py](redis_raw.py) — Comandos básicos da lib `redis`.
+  - [redis_perf.py](redis_perf.py) — Padrão cache-aside com “MySQL” mock.
+- Conexão:
+  - [models/connection/connect_options.py](models/connection/connect_options.py) — Parâmetros de conexão.
+  - [models/connection/redis_connection.py](models/connection/redis_connection.py) — Cria a conexão (`RedisConnectionHandle`).
 - Repositórios:
-  - [`models.redis.redis_repository.RedisRepository`](models/redis/redis_repository.py) — Operações de alto nível (set/get, hash, TTL).
-  - [`models.mysql.mysql_repository.MysqlRepository`](models/mysql/mysql_repository.py) — Mock de fonte de dados (simula o “banco” para fallback).
+  - [models/redis/redis_repository.py](models/redis/redis_repository.py) — SET/GET, HSET/HGET, TTL.
+  - [models/mysql/mysql_repository.py](models/mysql/mysql_repository.py) — Mock de fonte de dados.
 
-## Requisitos
+## Pré-requisitos
 
 - Python 3.11+
-- Dependências:
-  - redis (driver oficial)
+- Dependência:
+  ```
+  pip install redis
+  ```
 
-Instale a dependência:
+## Instalação rápida (Windows/PowerShell)
+
 ```
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install redis
 ```
 
 ## Configuração
 
-As credenciais do Redis são lidas de [models/connection/connect_options.py](models/connection/connect_options.py). Para segurança, prefira variáveis de ambiente e NÃO versione segredos. Exemplo (PowerShell):
+Recomenda-se usar variáveis de ambiente (não versione segredos):
 
 ```
 $env:REDIS_HOST="seu-host"
@@ -42,55 +46,42 @@ $env:REDIS_DB="0"
 $env:REDIS_PASSWORD="sua-senha"
 ```
 
-Depois, ajuste [models/connection/connect_options.py](models/connection/connect_options.py) para ler de `os.environ` (recomendado).
+Ajuste [models/connection/connect_options.py](models/connection/connect_options.py) para ler de `os.environ`.
 
 ## Como executar
-
-No terminal integrado do VS Code:
 
 - Comandos básicos:
   ```
   python redis_raw.py
   ```
 
-- Hash com expiração e consumo no “form”:
+- Hash com expiração + integração com `start_form`:
   ```
   python run.py
   ```
   Observações:
   - Usa a data atual como nome do hash.
   - Insere campos “banana”, “apple”, “uva”.
-  - Define TTL (40s) no hash via [`models.redis.redis_repository.RedisRepository.insert_hash_ex`](models/redis/redis_repository.py).
+  - Define TTL (40s) no hash com `insert_hash_ex`.
 
 - Cache-aside (Redis + “MySQL” mock):
   ```
   python redis_perf.py
   ```
   Fluxo:
-  1) Tenta ler do cache via [`models.redis.redis_repository.RedisRepository.get`](models/redis/redis_repository.py).
-  2) Se não existir, busca no “MySQL” mock ([`models.mysql.mysql_repository.MysqlRepository`](models/mysql/mysql_repository.py)) e popula o Redis com expiração via [`insert_ex`](models/redis/redis_repository.py).
+  1) Tenta ler do Redis (`RedisRepository.get`).
+  2) Se não existir, lê do mock MySQL e grava no Redis com expiração (`insert_ex`).
 
-## Como usar o Redis (resumo)
+## Resumo de aplicações com Redis
 
-- Strings:
-  - SET/GET para armazenar valores simples.
-  - TTL/EXPIRE para expiração automática de chaves.
+- Cache de leitura (cache-aside).
+- Sessões de usuário.
+- Rate limiting (contadores com TTL).
+- Filas/streams para processamento assíncrono.
+- Leaderboards (Sorted Sets).
+- Locks distribuídos (SET NX + TTL).
 
-- Hashes:
-  - HSET/HGET/HGETALL para estruturas do tipo dicionário (útil para perfis, itens de catálogo).
-  - EXPIRE no nome do hash para invalidar o conjunto após um tempo.
-
-- Casos comuns:
-  - Cache de leitura (cache-aside).
-  - Armazenamento de sessão.
-  - Rate limiting (contadores com TTL).
-  - Filas simples com listas/streams.
-  - Leaderboards com Sorted Sets.
-  - Locks distribuídos (SET com NX + TTL).
-
-## Exemplo de uso em código
-
-Este repositório já oferece a classe [`models.redis.redis_repository.RedisRepository`](models/redis/redis_repository.py) para facilitar:
+## Exemplo de uso (código)
 
 ```python
 from models.connection.redis_connection import RedisConnectionHandle
@@ -108,3 +99,10 @@ repo.insert_hash_ex("user:1", "name", "Alice", 30)
 print(repo.get("foo"))                  # -> "bar"
 print(repo.get_hash("user:1", "name"))  # -> "Alice"
 ```
+
+## Boas práticas
+
+- Nunca commitar credenciais; use variáveis de ambiente/secret manager.
+- Defina TTL para chaves de cache.
+- Padronize nomes (ex.: entidade:id:campo).
+- Monitore hits/misses e ajuste TTL conforme a necessidade.
